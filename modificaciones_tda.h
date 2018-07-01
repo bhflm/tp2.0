@@ -25,7 +25,6 @@ void cargar_linea_registro(linea_registro_t* registro,char* linea);
 void destruir_registro_individual(linea_registro_t* registro);
 void linea_registro_destruir(linea_registro_t** registro,size_t TAM_REGISTRO);
 registro_t* crear_registro(char* linea,FILE* fp);
-void registro_destruir(registro_t** registro,size_t TAM_REGISTRO);
 void free_strvs(char** a, char** b);
 int funcion_cmp_logs(void* log_a, void* log_b);
 int funcion_cmp_registros(void* a,void* b);

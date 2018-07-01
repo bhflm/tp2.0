@@ -69,15 +69,6 @@ registro_t* crear_registro(char* linea,FILE* fp){
   return registro;
 }
 
-void registro_destruir(registro_t** registro,size_t TAM_REGISTRO){
-  for(size_t i=0;i<TAM_REGISTRO;i++){
-    if(registro[i]){
-      free((char*)registro[i]->linea);
-    }
-    free(registro[i]);
-  }
-  free(registro);
-}
 
 void free_strvs(char** a, char** b){
   free_strv(a);
@@ -144,7 +135,6 @@ int funcion_cmp_logs(void* log_a, void* log_b){
        }
   }
 }
-
 
 int funcion_cmp_registros(void* a,void* b){
   //PSEUDO WRAPPER

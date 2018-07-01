@@ -3,6 +3,7 @@
 #define TIME_FORMAT "%FT%T%z"
 
 #include <time.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -48,7 +49,6 @@ void cargar_particion(FILE* log_original,FILE* particion,size_t K_LINEAS, size_t
 }
 
 void generar_log_ordenado(FILE** particiones_temporales,size_t K_PARTICIONES,const char* output){
-  printf("OUTPUT: %s\n",output);
   FILE* log_ordenado = fopen(output,"w");
   if(!log_ordenado) return;
 
@@ -67,17 +67,16 @@ void generar_log_ordenado(FILE** particiones_temporales,size_t K_PARTICIONES,con
 
   for(size_t i = 0 ; i < K_PARTICIONES; i++){
     leidos = getline(&linea,&tam_linea,particiones_temporales[i]);
-    //Armo el struct.
     registros[i] = crear_registro(linea,particiones_temporales[i]);
     heap_encolar(heap,(void*)registros[i]);
   }
-
+  free(linea);
 
   registro_t* registro_heap;
   linea = NULL;
   tam_linea = 0 ;
   leidos = 0;
-  //Esta quedando sin liberar el registro_heap y es el unico leak de memoria q queda.
+
   while(!heap_esta_vacio(heap)){
      void* elemento = heap_desencolar(heap);
      FILE* ultimo_registro = ((registro_t*)elemento)->fp;
@@ -94,20 +93,28 @@ void generar_log_ordenado(FILE** particiones_temporales,size_t K_PARTICIONES,con
      char* linea_escribir = strdup(linea_registro);
      char** campos = split(linea_escribir,'\t');
      fprintf(log_ordenado,"%s	%s	%s	%s",campos[0],campos[1],campos[2],campos[3]);
+     
+     free((char*)((registro_t*)elemento)->linea);
+     free((registro_t*)elemento);
      free(linea_escribir);
+
      free_strv(campos);
   }
   free(linea);
 
 
-  registro_destruir(registros,K_PARTICIONES);
+  for(size_t i = 0 ;i<K_PARTICIONES;i++){
+    fclose(particiones_temporales[i]);
+  }
+
+  free(registros);
   heap_destruir(heap,NULL);
   fclose(log_ordenado);
 }
+
 bool ordenar_archivo(size_t memoria,const char* archivo,const char* output){
-  printf("____ordenar_archivo___\n");
   FILE* log_original = fopen(archivo,"r");
-  if(!log_original) return FALSE;
+  if(!log_original) return false;
   //Cuento las lineas y la linea mas grande.
   size_t cantidad_lineas_archivo = 0;
   size_t tam_max_linea = 0;
@@ -115,6 +122,7 @@ bool ordenar_archivo(size_t memoria,const char* archivo,const char* output){
 
   char* linea=NULL;
   size_t tam_linea = 0;
+
   //Primera pasada para contar cantidad de lineas y buscar el tma max de linea.
   while(getline(&linea,&tam_linea,log_original)!=-1){
       if(tam_linea>tam_max_linea) tam_max_linea=tam_linea;
@@ -137,7 +145,6 @@ bool ordenar_archivo(size_t memoria,const char* archivo,const char* output){
   for(size_t i = 0 ;i<K_PARTICIONES;i++){
     char filename[50];
     sprintf(filename,"particion%zu.txt",i);
-    //printf("%s\n",filename);
     particiones_temporales[i] = fopen(filename,"w");
 
     cargar_particion(log_original,particiones_temporales[i],K_LINEAS,p_cantidad_registros_cargados,cantidad_lineas_archivo);
@@ -146,7 +153,13 @@ bool ordenar_archivo(size_t memoria,const char* archivo,const char* output){
 
   generar_log_ordenado(particiones_temporales,K_PARTICIONES,output);
   fclose(log_original);
-  return TRUE;
+
+  for(size_t i = 0; i<K_PARTICIONES;i++){
+    char filename[50];
+    sprintf(filename,"particion%zu.txt",i);
+    remove(filename);
+  }
+  return true;
 }
 
 
@@ -286,10 +299,10 @@ int main(int argc, char* argv[]){
     printf("Memoria insuficiente.");
     return 1;
   }
-  
+
   //Hay que pasarle la funcion de destruir y comparacion. 
-  //Comparacion es 
-  abb_t* ab_ips = arbol_crear(NULL,NULL);
+  //Comparacion es de ips. seguramente
+  abb_t* ab_ips = abb_crear(funcion_cmp_ip,free);
 
   char* comando = NULL;
   size_t cap = 0;
@@ -305,7 +318,7 @@ int main(int argc, char* argv[]){
       char* input = parsear_linea(comando,1);
       if(funcion==0){
         char* output = parsear_linea(comando,2);
-        if(ordenar_archivo(mem_disponible,input,output)) printf("OK");
+        if(ordenar_archivo(mem_disponible,input,output)) printf("OK\n");
         else fprintf(stderr,"Error en comando ordenar_archivo");
         free(output);
       }
@@ -317,28 +330,22 @@ int main(int argc, char* argv[]){
     }
 
     else{
-        printf("//ver_visitantes\n");
         if(abb_cantidad(ab_ips)==0){
           fprintf(stderr,"Error en comando ver_visitantes");
         }
         else{
         char* ip_a = parsear_linea(comando,1);
         char* ip_b = parsear_linea(comando,2);
-        ver_visitantes(ip_a,ip_b,arbol);
+        ver_visitantes(ip_a,ip_b,ab_ips);
         free(ip_a);
         free(ip_b);
         }
     }
+
     leidos = getline(&comando,&cap,stdin);
-    if(leidos==-1){
-      break;
-      abb_destruir(ab_ips);
-      }
   }
+
+  abb_destruir(ab_ips);
   free(comando);
   return 0;
 }
-
-
-
-// cat archivoejemplo.txt | valgrind --leak-check=full --track-origins=yes --show-reachable=yes ./tp2 1000
