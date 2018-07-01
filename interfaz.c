@@ -104,11 +104,10 @@ void generar_log_ordenado(FILE** particiones_temporales,size_t K_PARTICIONES,con
   heap_destruir(heap,NULL);
   fclose(log_ordenado);
 }
-
-void ordenar_archivo(size_t memoria,const char* archivo,const char* output){
+bool ordenar_archivo(size_t memoria,const char* archivo,const char* output){
   printf("____ordenar_archivo___\n");
   FILE* log_original = fopen(archivo,"r");
-  if(!log_original) return;
+  if(!log_original) return FALSE;
   //Cuento las lineas y la linea mas grande.
   size_t cantidad_lineas_archivo = 0;
   size_t tam_max_linea = 0;
@@ -126,8 +125,7 @@ void ordenar_archivo(size_t memoria,const char* archivo,const char* output){
   size_t K_PARTICIONES = memoria / tam_max_linea;
 
   size_t K_LINEAS = (cantidad_lineas_archivo / K_PARTICIONES ) + 1;
-  printf("K_LINEAS%zu\nCANT_LINEAS:%zu\nK_PARTICIONES%zu\n",K_LINEAS,cantidad_lineas_archivo,K_PARTICIONES);
-
+  
   fseek( log_original, 0, SEEK_SET );
 
   //Hago un vector de particiones  y  c/u lo cargo con K lineas.
@@ -148,6 +146,7 @@ void ordenar_archivo(size_t memoria,const char* archivo,const char* output){
 
   generar_log_ordenado(particiones_temporales,K_PARTICIONES,output);
   fclose(log_original);
+  return TRUE;
 }
 
 
@@ -185,7 +184,6 @@ abb_t* encontrar_DoS(hash_t* hash){
 	return abb_DoS;
 }
 
-
 void imprimir_DoS(abb_t* arbol){
 	abb_iter_t* iterador_abb = abb_iter_in_crear(arbol);
 	while(!abb_iter_in_al_final(iterador_abb)){
@@ -195,9 +193,11 @@ void imprimir_DoS(abb_t* arbol){
 	abb_iter_in_destruir(iterador_abb);
 }
 
-void agregar_archivo(FILE* log, abb_t* abb_ips){
+void agregar_archivo(const char* archivo, abb_t* abb_ips){
+  FILE* log = fopen(archivo,"r");
+	if(!log) return;
 
-	hash_t* hash = hash_crear(NULL);
+  hash_t* hash = hash_crear(NULL);
 
 	char* linea = NULL;
 	size_t tam_linea = 0;
@@ -227,6 +227,7 @@ void agregar_archivo(FILE* log, abb_t* abb_ips){
 	abb_destruir(abb_DoS);
 
 	hash_destruir(hash);
+  fclose(log);
 }
 
 void ver_visitantes(char* ip1, char* ip2, abb_t* abb_ips){
@@ -246,15 +247,15 @@ void ver_visitantes(char* ip1, char* ip2, abb_t* abb_ips){
 	abb_iter_in_destruir(iterador_abb);
 }
 
-char* nombre_archivo(char* linea,size_t numero_campo){
+char* parsear_linea(char* linea,size_t numero_campo){
   char** campos = split(linea,' ');
-  char* archivo = strdup(campos[numero_campo]);
+  char* campo = strdup(campos[numero_campo]);
   free_strv(campos);
-  return archivo;
+  return campo;
 }
 
-size_t llamar_funcion(char* comando){
 
+size_t llamar_funcion(char* comando){
   char** campos = split(comando,' ');
   size_t funcion;
   if(strcmp(campos[0],ORDENAR_ARCHIVO)==0){
@@ -285,9 +286,10 @@ int main(int argc, char* argv[]){
     printf("Memoria insuficiente.");
     return 1;
   }
-
-  //Aca hay que poner el arbol para que viva en memoria.
-  //bool hay_arbol = false;
+  
+  //Hay que pasarle la funcion de destruir y comparacion. 
+  //Comparacion es 
+  abb_t* ab_ips = arbol_crear(NULL,NULL);
 
   char* comando = NULL;
   size_t cap = 0;
@@ -296,40 +298,47 @@ int main(int argc, char* argv[]){
   leidos = getline(&comando,&cap,stdin);
 
   while(leidos!=-1){
-    printf("%s",comando);
 
     size_t funcion = llamar_funcion(comando);
 
-    printf("%zu",funcion);
-
     if(funcion==0 || funcion==1){
-      char* input = nombre_archivo(comando,1);
-      printf("INPUT: %s\n",input);
-
+      char* input = parsear_linea(comando,1);
       if(funcion==0){
-        char* output = nombre_archivo(comando,2);
-        ordenar_archivo(mem_disponible,input,output);
-        printf("%s\n",output);
+        char* output = parsear_linea(comando,2);
+        if(ordenar_archivo(mem_disponible,input,output)) printf("OK");
+        else fprintf(stderr,"Error en comando ordenar_archivo");
+        free(output);
       }
       else{
-        printf("//agregar_archivo\n");
-        //agregar_archivo(input,arbol);
+        agregar_archivo(input,ab_ips);
+        
       }
+      free(input);
     }
 
     else{
-      printf("//ver_visitantes\n");
-        //if(hay_arbol == false ) hay_arbol = true;
-        //ip_a;
-        //ip_b;
-        //ver_visitantes(ip_a,ip_b,arbol);
+        printf("//ver_visitantes\n");
+        if(abb_cantidad(ab_ips)==0){
+          fprintf(stderr,"Error en comando ver_visitantes");
+        }
+        else{
+        char* ip_a = parsear_linea(comando,1);
+        char* ip_b = parsear_linea(comando,2);
+        ver_visitantes(ip_a,ip_b,arbol);
+        free(ip_a);
+        free(ip_b);
+        }
     }
     leidos = getline(&comando,&cap,stdin);
     if(leidos==-1){
       break;
-      //Liberar arbol
-    }
+      abb_destruir(ab_ips);
+      }
   }
   free(comando);
   return 0;
 }
+
+
+
+// cat archivoejemplo.txt | valgrind --leak-check=full --track-origins=yes --show-reachable=yes ./tp2 1000
