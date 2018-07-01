@@ -18,6 +18,8 @@ const char* ORDENAR_ARCHIVO = "ordenar_archivo";
 const char* AGREGAR_ARCHIVO = "agregar_archivo";
 const char* VER_VISITANTES = "ver_visitantes";
 
+// gcc -g -Wall -Wconversion -Wno-sign-conversion -Werror -o tp2 *.c
+
 /*Esta funcion se encarga de cargar una particion con sus K lineas correspondientes.*/
 void cargar_particion(FILE* log_original,FILE* particion,size_t K_LINEAS, size_t* cantidad_registros_cargados,size_t cantidad_lineas_archivo){
   linea_registro_t** lineas_particion;
@@ -46,6 +48,7 @@ void cargar_particion(FILE* log_original,FILE* particion,size_t K_LINEAS, size_t
 }
 
 void generar_log_ordenado(FILE** particiones_temporales,size_t K_PARTICIONES,const char* output){
+  printf("OUTPUT: %s\n",output);
   FILE* log_ordenado = fopen(output,"w");
   if(!log_ordenado) return;
 
@@ -149,16 +152,16 @@ void ordenar_archivo(size_t memoria,const char* archivo,const char* output){
 
 
 abb_t* encontrar_DoS(hash_t* hash){
-	
+
 	hash_iter_t* iterador_hash = hash_iter_crear(hash);
 	abb_t* abb_DoS = abb_crear(funcion_cmp_ip, NULL);
 
 	while(!hash_iter_al_final(iterador_hash)){
 		lista_t* horarios = hash_obtener(hash, hash_iter_ver_actual(iterador_hash));
-		
+
 		lista_iter_t* iterador1 = lista_iter_crear(horarios);
 		lista_iter_t* iterador2 = lista_iter_crear(horarios);
-		
+
 		for(int i = 0; i < 5; i++){
 			lista_iter_avanzar(iterador2);
 		}
@@ -202,7 +205,7 @@ void agregar_archivo(FILE* log, abb_t* abb_ips){
 	leidos = getline(&linea, &tam_linea, log);
 
 	char** registro;
-	
+
 	while(leidos != -1){
 		registro = split(linea, *(char*)"\t");
 		char* ip = registro[0];
@@ -226,13 +229,11 @@ void agregar_archivo(FILE* log, abb_t* abb_ips){
 	hash_destruir(hash);
 }
 
-
-
 void ver_visitantes(char* ip1, char* ip2, abb_t* abb_ips){
 
 	printf("Visitantes:\n");
 	abb_iter_t* iterador_abb = abb_iter_in_crear(abb_ips);
-	
+
 	while (!abb_iter_in_al_final(iterador_abb) && funcion_cmp_ip(ip1, abb_iter_in_ver_actual(iterador_abb)) >= 0){
 		abb_iter_in_avanzar(iterador_abb);
 	}
@@ -245,18 +246,9 @@ void ver_visitantes(char* ip1, char* ip2, abb_t* abb_ips){
 	abb_iter_in_destruir(iterador_abb);
 }
 
-
-
-char* nombre_output(char* linea){
+char* nombre_archivo(char* linea,size_t numero_campo){
   char** campos = split(linea,' ');
-  char* archivo = strdup(campos[2]);
-  free_strv(campos);
-  return archivo;
-}
-
-char* nombre_input(char* linea){
-  char** campos = split(linea,' ');
-  char* archivo = strdup(campos[1]);
+  char* archivo = strdup(campos[numero_campo]);
   free_strv(campos);
   return archivo;
 }
@@ -285,7 +277,6 @@ int main(int argc, char* argv[]){
     return 1;
   }
 
-
   size_t mem_disponible = atoi(argv[1]);
 
   if(mem_disponible <= 0){
@@ -311,12 +302,12 @@ int main(int argc, char* argv[]){
 
     printf("%zu",funcion);
 
-    if(funcion==0 || funcion ==1){
-      char* input = nombre_input(comando);
+    if(funcion==0 || funcion==1){
+      char* input = nombre_archivo(comando,1);
       printf("INPUT: %s\n",input);
 
       if(funcion==0){
-        char* output = nombre_output(comando);
+        char* output = nombre_archivo(comando,2);
         ordenar_archivo(mem_disponible,input,output);
         printf("%s\n",output);
       }
