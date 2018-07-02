@@ -7,14 +7,6 @@
 #include "pila.h"
 
 
-
-char* strdup(const char *anterior) {
-	char* nuevo = malloc(sizeof(char) * (strlen(anterior) + 1));
-	if (!nuevo) return NULL;
-	strcpy(nuevo, anterior);
-	return nuevo;
-}
-
 typedef struct nodo{
 	struct nodo *izq;
 	struct nodo *der;

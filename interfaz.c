@@ -206,9 +206,9 @@ void imprimir_DoS(abb_t* arbol){
 	abb_iter_in_destruir(iterador_abb);
 }
 
-void agregar_archivo(const char* archivo, abb_t* abb_ips){
+bool agregar_archivo(const char* archivo, abb_t* abb_ips){
   FILE* log = fopen(archivo,"r");
-	if(!log) return;
+	if(!log) return false;
 
   hash_t* hash = hash_crear(NULL);
 
@@ -241,6 +241,7 @@ void agregar_archivo(const char* archivo, abb_t* abb_ips){
 
 	hash_destruir(hash);
   fclose(log);
+  return true;
 }
 
 void ver_visitantes(char* ip1, char* ip2, abb_t* abb_ips){
@@ -260,9 +261,25 @@ void ver_visitantes(char* ip1, char* ip2, abb_t* abb_ips){
 	abb_iter_in_destruir(iterador_abb);
 }
 
-char* parsear_linea(char* linea,size_t numero_campo){
+char* parsear_linea(char* linea,size_t numero_campo,const char* funcion){
   char** campos = split(linea,' ');
-  char* campo = strdup(campos[numero_campo]);
+  char* campo;
+
+  //agregar_archivo ejemplo.log\n <- sacar \n de aca 
+  //ver_visitantes 192.100.100 192.100.101\n <- 
+  //ordenar_archivo ejemplo.log ejemplo-ordenado.log\n <- 
+
+  // if(strcmp(funcion,AGREGAR_ARCHIVO)){ //El ultimo de /agregar archivo tiene \n
+  //   campo = strndup(campos[numero_campo],strlen(campos[numero_campo])-1);
+  // }
+  // else{
+  //   if(numero_campo==1){
+  //     campo = strndup(campos[numero_campo],strlen(campos[numero_campo]));
+  //   }
+  //   else { //te pasan numerocampo==2
+  //     campo = strndup(campos[numero_campo],strlen(campos[numero_campo])-1);
+  //   }
+  // }
   free_strv(campos);
   return campo;
 }
@@ -313,35 +330,43 @@ int main(int argc, char* argv[]){
   while(leidos!=-1){
 
     size_t funcion = llamar_funcion(comando);
-
-    if(funcion==0 || funcion==1){
-      char* input = parsear_linea(comando,1);
+    printf("FUNCION: %zu\n",funcion);
+    
       if(funcion==0){
-        char* output = parsear_linea(comando,2);
+        char* input = parsear_linea(comando,1,ORDENAR_ARCHIVO);
+        char* output = parsear_linea(comando,2,ORDENAR_ARCHIVO);
+
+        printf("%s",input);
+        printf("%s",output);
+        
         if(ordenar_archivo(mem_disponible,input,output)) printf("OK\n");
-        else fprintf(stderr,"Error en comando ordenar_archivo");
+        else fprintf(stderr,"Error en comando ordenar_archivo\n");
         free(output);
       }
-      else{
-        agregar_archivo(input,ab_ips);
+      else if (funcion==1) {
+        char* input = parsear_linea(comando,1,AGREGAR_ARCHIVO);
         
+        printf("%s",input);
+        
+        if(agregar_archivo(input,ab_ips)) printf("OK\n");
+        else fprintf(stderr,"Error en comando agregar_archivo\n");
+        }
+      else{
+          if(abb_cantidad(ab_ips)==0){
+            fprintf(stderr,"Error en comando ver_visitantes\n");
+          }
+          else{
+          char* ip_a = parsear_linea(comando,1,VER_VISITANTES);
+          char* ip_b = parsear_linea(comando,2,VER_VISITANTES);
+        
+          printf("%s",ip_a);
+          printf("%s",ip_b);
+        
+          ver_visitantes(ip_a,ip_b,ab_ips);
+          free(ip_a);
+          free(ip_b);
+          }
       }
-      free(input);
-    }
-
-    else{
-        if(abb_cantidad(ab_ips)==0){
-          fprintf(stderr,"Error en comando ver_visitantes");
-        }
-        else{
-        char* ip_a = parsear_linea(comando,1);
-        char* ip_b = parsear_linea(comando,2);
-        ver_visitantes(ip_a,ip_b,ab_ips);
-        free(ip_a);
-        free(ip_b);
-        }
-    }
-
     leidos = getline(&comando,&cap,stdin);
   }
 
