@@ -75,13 +75,37 @@ void free_strvs(char** a, char** b){
   free_strv(b);
 }
 
+
+int funcion_cmp_ip(const char* ip1, const char* ip2){   
+  
+  char** array_ip1 = split(ip1,'.');
+  char** array_ip2 = split(ip2,'.');
+  int resultado = 0;
+
+  for (int i = 0; i < 4; i++){
+    int actual_1 = atoi(array_ip1[i]);
+    int actual_2 = atoi(array_ip2[i]);
+    if (actual_1 > actual_2){
+      resultado = 1;
+      break;
+    } else if (actual_1 < actual_2){
+      resultado = -1;
+      break;
+    }
+  }
+
+  free_strv(array_ip1);
+  free_strv(array_ip2);
+  return resultado;
+}
+
 int funcion_cmp_logs(void* log_a, void* log_b){
 
   char* tiempo_a =  ((linea_registro_t*)log_a)->fecha;
-  char * tiempo_b = ((linea_registro_t*)log_a)->fecha;
+  char* tiempo_b = ((linea_registro_t*)log_a)->fecha;
 
-  char* ip_a = ((linea_registro_t*)log_a)->ip;
-  char* ip_b = ((linea_registro_t*)log_b)->ip;
+  const char* ip_a = ((linea_registro_t*)log_a)->ip;
+  const char* ip_b = ((linea_registro_t*)log_b)->ip;
 
   char* recurso_a = ((linea_registro_t*)log_a)->recurso;
   char* recurso_b = ((linea_registro_t*)log_b)->recurso;
@@ -89,21 +113,15 @@ int funcion_cmp_logs(void* log_a, void* log_b){
   time_t a = iso8601_to_time(tiempo_a);
   time_t b = iso8601_to_time(tiempo_b);
 
-
-
   double diferencia = difftime(a,b);
   /*
   Comparacion de diffs de tiempos.
-
   Estamos buscando un heap armado de minimos, significa, que vamos a tener algo del
   estilo (menor horario, mh+1, mh+2, .... mh+n);
-
   Si a es mas temprano que b, diff devuelve < 0, entonces tiene q subir en upheap. >
   > para que suba en upheap, tiene que entrar al swap, esto pasa si en la comparacion
   de upheap se devuelve > 0.
-
   Si a es mas tarde que b, diff devuelve>0.
-
   Si a es == b, diff devuelve 0.
   */
 
@@ -114,24 +132,21 @@ int funcion_cmp_logs(void* log_a, void* log_b){
     return -1;
   }
    else{
+
        //Tiempos son iguales. Comparo por IPS.
-       if (strcmp(ip_a,ip_b)<0){
+       if ((funcion_cmp_ip(ip_a,ip_b)==-1)){
          return 1;
        }
-       else if(strcmp(ip_a,ip_b)>0){
+       else if((funcion_cmp_ip(ip_a,ip_b))==1){
          return -1;
        }
+
        else{
          //Tiempos e IPS son iguales. Comparo por recursos.
          if (strcmp(recurso_a,recurso_b)<0){
           return 1;
          }
-
-
-
-         else{
          return -1;
-         }
        }
   }
 }
@@ -145,7 +160,6 @@ int funcion_cmp_registros(void* a,void* b){
   linea_registro_t** registros;
   registros = malloc(sizeof(linea_registro_t*)*2);
   if(!registros) return 0;
-
   registros[0] = crear_linea_registro();
   registros[1] = crear_linea_registro();
 
@@ -162,25 +176,4 @@ int funcion_cmp_registros(void* a,void* b){
   return comparacion;
 }
 
-int funcion_cmp_ip(const char* ip1, const char* ip2){		
-	
-	char** array_ip1 = split(ip1,'.');
-	char** array_ip2 = split(ip2,'.');
-	int resultado = 0;
 
-	for (int i = 0; i < 4; i++){
-		int actual_1 = atoi(array_ip1[i]);
-		int actual_2 = atoi(array_ip2[i]);
-		if (actual_1 > actual_2){
-			resultado = 1;
-			break;
-		} else if (actual_1 < actual_2){
-			resultado = -1;
-			break;
-		}
-	}
-
-	free_strv(array_ip1);
-	free_strv(array_ip2);
-	return resultado;
-}

@@ -15,6 +15,8 @@
 #include "heap.h"
 #include "modificaciones_tda.h"
 
+#define KILOBYTE 1000
+
 const char* ORDENAR_ARCHIVO = "ordenar_archivo";
 const char* AGREGAR_ARCHIVO = "agregar_archivo";
 const char* VER_VISITANTES = "ver_visitantes";
@@ -29,6 +31,8 @@ void cargar_particion(FILE* log_original,FILE* particion,size_t K_LINEAS, size_t
   size_t tam_linea = 0;
   size_t particiones_cargadas = 0 ;
   ssize_t leidos;
+  
+  //CARGO LAS LINEAS
   for(size_t l=0; l<K_LINEAS;l++){
     leidos = getline(&linea,&tam_linea,log_original);
     if(leidos!=-1){
@@ -40,14 +44,18 @@ void cargar_particion(FILE* log_original,FILE* particion,size_t K_LINEAS, size_t
   }
   free(linea);
 
+  //ORDENO LAS LINEAS. 
   heap_sort((void**)lineas_particion,particiones_cargadas,(cmp_func_t)funcion_cmp_logs);
 
+
+  //ESCRIBO LAS LINEAS
   for(size_t i = 0 ; i < particiones_cargadas; i++){
     fprintf(particion,"%s	%s	%s	%s",lineas_particion[i]->ip,lineas_particion[i]->fecha,lineas_particion[i]->recurso,lineas_particion[i]->ruta);
   }
   linea_registro_destruir(lineas_particion,particiones_cargadas);
 }
 
+//Master of the sopa se encarga de juntar las k particiones ordenadas y devolver el log ordenado.
 void generar_log_ordenado(FILE** particiones_temporales,size_t K_PARTICIONES,const char* output){
   FILE* log_ordenado = fopen(output,"w");
   if(!log_ordenado) return;
@@ -112,9 +120,11 @@ void generar_log_ordenado(FILE** particiones_temporales,size_t K_PARTICIONES,con
   fclose(log_ordenado);
 }
 
-bool ordenar_archivo(size_t memoria,const char* archivo,const char* output){
+bool ordenar_archivo(size_t memoria_kb,const char* archivo,const char* output){
   FILE* log_original = fopen(archivo,"r");
   if(!log_original) return false;
+  
+  size_t memoria = memoria_kb * KILOBYTE;
   //Cuento las lineas y la linea mas grande.
   size_t cantidad_lineas_archivo = 0;
   size_t tam_max_linea = 0;
@@ -122,23 +132,21 @@ bool ordenar_archivo(size_t memoria,const char* archivo,const char* output){
 
   char* linea=NULL;
   size_t tam_linea = 0;
-
   //Primera pasada para contar cantidad de lineas y buscar el tma max de linea.
   while(getline(&linea,&tam_linea,log_original)!=-1){
       if(tam_linea>tam_max_linea) tam_max_linea=tam_linea;
       cantidad_lineas_archivo++;
   }
-
   free(linea);
-  size_t K_PARTICIONES = memoria / tam_max_linea;
 
+  if(memoria <= tam_max_linea) memoria = tam_max_linea * 3;
+  size_t K_PARTICIONES = memoria / tam_max_linea;
   size_t K_LINEAS = (cantidad_lineas_archivo / K_PARTICIONES ) + 1;
-  
+  //Vuelvo al principio del file para no tener que cerrar y volver a abrir. 
   fseek( log_original, 0, SEEK_SET );
 
   //Hago un vector de particiones  y  c/u lo cargo con K lineas.
   FILE* particiones_temporales[K_PARTICIONES];
-
   size_t cantidad_registros_cargados = 0;
   size_t* p_cantidad_registros_cargados = &cantidad_registros_cargados;
 
@@ -146,7 +154,6 @@ bool ordenar_archivo(size_t memoria,const char* archivo,const char* output){
     char filename[50];
     sprintf(filename,"particion%zu.txt",i);
     particiones_temporales[i] = fopen(filename,"w");
-
     cargar_particion(log_original,particiones_temporales[i],K_LINEAS,p_cantidad_registros_cargados,cantidad_lineas_archivo);
     fclose(particiones_temporales[i]);
   }
@@ -154,6 +161,7 @@ bool ordenar_archivo(size_t memoria,const char* archivo,const char* output){
   generar_log_ordenado(particiones_temporales,K_PARTICIONES,output);
   fclose(log_original);
 
+  //Borro los temporales.
   for(size_t i = 0; i<K_PARTICIONES;i++){
     char filename[50];
     sprintf(filename,"particion%zu.txt",i);
@@ -261,25 +269,21 @@ void ver_visitantes(char* ip1, char* ip2, abb_t* abb_ips){
 	abb_iter_in_destruir(iterador_abb);
 }
 
-char* parsear_linea(char* linea,size_t numero_campo,const char* funcion){
+
+//CONSISTENCIA EN LOS .TXT  -> COMER EL \N DEL FINAL 
+char* parsear_linea(char* linea,size_t numero_campo){
   char** campos = split(linea,' ');
   char* campo;
+  
+  if(campos[numero_campo+1]==NULL){
+    campo = strndup(campos[numero_campo],strlen(campos[numero_campo])-1);
+  }
+  else campo = strndup(campos[numero_campo],strlen(campos[numero_campo]));
 
-  //agregar_archivo ejemplo.log\n <- sacar \n de aca 
-  //ver_visitantes 192.100.100 192.100.101\n <- 
+  //agregar_archivo ejemplo.log \n <- sacar \n de aca 
+  //ver_visitantes 192.100.100 192.100.101 <- este no tira \n ??? (?) 
   //ordenar_archivo ejemplo.log ejemplo-ordenado.log\n <- 
 
-  // if(strcmp(funcion,AGREGAR_ARCHIVO)){ //El ultimo de /agregar archivo tiene \n
-  //   campo = strndup(campos[numero_campo],strlen(campos[numero_campo])-1);
-  // }
-  // else{
-  //   if(numero_campo==1){
-  //     campo = strndup(campos[numero_campo],strlen(campos[numero_campo]));
-  //   }
-  //   else { //te pasan numerocampo==2
-  //     campo = strndup(campos[numero_campo],strlen(campos[numero_campo])-1);
-  //   }
-  // }
   free_strv(campos);
   return campo;
 }
@@ -333,36 +337,40 @@ int main(int argc, char* argv[]){
     printf("FUNCION: %zu\n",funcion);
     
       if(funcion==0){
-        char* input = parsear_linea(comando,1,ORDENAR_ARCHIVO);
-        char* output = parsear_linea(comando,2,ORDENAR_ARCHIVO);
+        char* input = parsear_linea(comando,1);
+        char* output = parsear_linea(comando,2);
 
-        printf("%s",input);
-        printf("%s",output);
-        
         if(ordenar_archivo(mem_disponible,input,output)) printf("OK\n");
-        else fprintf(stderr,"Error en comando ordenar_archivo\n");
+        else fprintf(stderr,"Error en comando ordenar_archivo\n"); 
+        
+        free(input);
         free(output);
+
       }
       else if (funcion==1) {
-        char* input = parsear_linea(comando,1,AGREGAR_ARCHIVO);
+        char* input = parsear_linea(comando,1);
         
-        printf("%s",input);
+        printf("%s\n",input);
         
-        if(agregar_archivo(input,ab_ips)) printf("OK\n");
-        else fprintf(stderr,"Error en comando agregar_archivo\n");
-        }
+        // if(agregar_archivo(input,ab_ips)) printf("OK\n");
+        // else 
+        // 
+        fprintf(stderr,"Error en comando agregar_archivo\n");
+        
+        free(input);
+      }
       else{
           if(abb_cantidad(ab_ips)==0){
             fprintf(stderr,"Error en comando ver_visitantes\n");
           }
           else{
-          char* ip_a = parsear_linea(comando,1,VER_VISITANTES);
-          char* ip_b = parsear_linea(comando,2,VER_VISITANTES);
+          char* ip_a = parsear_linea(comando,1);
+          char* ip_b = parsear_linea(comando,2);
         
-          printf("%s",ip_a);
-          printf("%s",ip_b);
+          printf("ip_a:%s\n",ip_a);
+          printf("ip_b:%s\n",ip_b);
         
-          ver_visitantes(ip_a,ip_b,ab_ips);
+          //ver_visitantes(ip_a,ip_b,ab_ips);
           free(ip_a);
           free(ip_b);
           }

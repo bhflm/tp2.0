@@ -49,9 +49,14 @@ void downheap(void* arr[],size_t pos,size_t cantidad,cmp_func_t cmp){
   size_t der = izq+1;
   size_t mayor = pos;
 
+  printf("izq:%zu der:%zu mayor:%zu\n",izq,der,mayor);
   if((izq<cantidad-1) && cmp(arr[izq],arr[pos])>0) mayor = izq;
 
+  printf("izq:%zu der:%zu mayor:%zu\n",izq,der,mayor);
+
   if((der<cantidad-1) && cmp(arr[der],arr[mayor])>0) mayor = der;
+
+  printf("izq:%zu der:%zu mayor:%zu\n",izq,der,mayor);
 
   if(mayor!=pos){
     swap(arr,pos,mayor);
