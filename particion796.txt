@@ -1,1 +1,0 @@
-121.107.188.202	2015-05-17T11:05:09+00:00	GET	/presentations/logstash-monitorama-2013/images/kibana-dashboard3.png

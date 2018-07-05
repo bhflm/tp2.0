@@ -1,1 +1,0 @@
-70.190.77.28	2015-05-17T18:05:36+00:00	GET	/presentations/puppet-at-loggly/puppet-at-loggly.pdf.html

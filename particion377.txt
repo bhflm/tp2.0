@@ -1,1 +1,0 @@
-100.43.83.137	2015-05-17T17:05:18+00:00	GET	/images/selenium-squid-hack_iexplore.png

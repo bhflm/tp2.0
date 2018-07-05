@@ -1,1 +1,0 @@
-100.43.83.137	2015-05-17T18:05:47+00:00	GET	/images/ec2_m1large_cost.png

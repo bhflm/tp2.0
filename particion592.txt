@@ -1,1 +1,0 @@
-122.166.142.108	2015-05-17T17:05:35+00:00	GET	/presentations/logstash-puppetconf-2012/images/kibana-chef-hits-6min-each.png

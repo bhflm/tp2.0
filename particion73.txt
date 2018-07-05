@@ -1,1 +1,0 @@
-122.166.142.108	2015-05-17T17:05:48+00:00	GET	/presentations/logstash-puppetconf-2012/css/reset.css

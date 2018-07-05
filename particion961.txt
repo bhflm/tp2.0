@@ -1,1 +1,0 @@
-50.195.216.83	2015-05-17T14:05:57+00:00	GET	/presentations/logstash-scale11x/images/ahhh___rage_face_by_samusmmx-d5g5zap.png

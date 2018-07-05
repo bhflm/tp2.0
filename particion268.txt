@@ -1,1 +1,0 @@
-84.198.71.68	2015-05-17T16:05:02+00:00	GET	/files/blogposts/20091227/pretty-xterm.png

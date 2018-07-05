@@ -26,6 +26,7 @@ const char* VER_VISITANTES = "ver_visitantes";
 /*Esta funcion se encarga de cargar una particion con sus K lineas correspondientes.*/
 void cargar_particion(FILE* log_original,FILE* particion,size_t K_LINEAS, size_t* cantidad_registros_cargados,size_t cantidad_lineas_archivo){
   linea_registro_t** lineas_particion;
+
   lineas_particion = malloc(sizeof(linea_registro_t*)*K_LINEAS);
   char* linea=NULL;
   size_t tam_linea = 0;
@@ -43,19 +44,22 @@ void cargar_particion(FILE* log_original,FILE* particion,size_t K_LINEAS, size_t
     }
   }
   free(linea);
-
+  printf("LINEAS: %zu\n",K_LINEAS);
   //ORDENO LAS LINEAS. 
   heap_sort((void**)lineas_particion,particiones_cargadas,(cmp_func_t)funcion_cmp_logs);
 
 
   //ESCRIBO LAS LINEAS
   for(size_t i = 0 ; i < particiones_cargadas; i++){
+    
+    printf("%s | %s\n",lineas_particion[i]->ip,lineas_particion[i]->fecha);
+    
     fprintf(particion,"%s	%s	%s	%s",lineas_particion[i]->ip,lineas_particion[i]->fecha,lineas_particion[i]->recurso,lineas_particion[i]->ruta);
   }
   linea_registro_destruir(lineas_particion,particiones_cargadas);
 }
 
-//Master of the sopa se encarga de juntar las k particiones ordenadas y devolver el log ordenado.
+//Se encarga de juntar las k particiones ordenadas y devolver el log ordenado.
 void generar_log_ordenado(FILE** particiones_temporales,size_t K_PARTICIONES,const char* output){
   FILE* log_ordenado = fopen(output,"w");
   if(!log_ordenado) return;
@@ -71,46 +75,48 @@ void generar_log_ordenado(FILE** particiones_temporales,size_t K_PARTICIONES,con
   ssize_t leidos;
 
   registro_t** registros = malloc(sizeof(registro_t*)*K_PARTICIONES);
-  heap_t* heap = heap_crear((cmp_func_t)funcion_cmp_registros);
 
   for(size_t i = 0 ; i < K_PARTICIONES; i++){
     leidos = getline(&linea,&tam_linea,particiones_temporales[i]);
     registros[i] = crear_registro(linea,particiones_temporales[i]);
-    heap_encolar(heap,(void*)registros[i]);
   }
   free(linea);
 
+  //Creo el heap 
+  heap_t* heap = heap_crear_arr((void**)registros,K_PARTICIONES,(cmp_func_t)funcion_cmp_registros);
+  
   registro_t* registro_heap;
   linea = NULL;
   tam_linea = 0 ;
   leidos = 0;
 
   while(!heap_esta_vacio(heap)){
+    //Saco la menor de las lineas del heap. 
      void* elemento = heap_desencolar(heap);
+     //Me quedo con la referencia de que registro vino. Y la linea para escribir
      FILE* ultimo_registro = ((registro_t*)elemento)->fp;
      char* linea_registro = ((registro_t*)elemento)->linea;
-
-     leidos = getline(&linea,&tam_linea,ultimo_registro);
-
-     if(leidos != -1){
-      registro_heap = crear_registro(linea,ultimo_registro);
-       heap_encolar(heap,(void*)registro_heap);
-     }
-
-
+     //Escribo la linea 
      char* linea_escribir = strdup(linea_registro);
      char** campos = split(linea_escribir,'\t');
-     fprintf(log_ordenado,"%s	%s	%s	%s",campos[0],campos[1],campos[2],campos[3]);
-     
+     fprintf(log_ordenado,"%s %s  %s  %s",campos[0],campos[1],campos[2],campos[3]);
+
+     //Levanto la linea. Si el archivo se quedo sin lineas no entra al if y no sigue encolando.
+     leidos = getline(&linea,&tam_linea,ultimo_registro);
+     if(leidos != -1){
+      //Si entro, es porque el archivo tiene lineas, entonces encolo en el heap. 
+      registro_heap = crear_registro(linea,ultimo_registro);
+      heap_encolar(heap,(void*)registro_heap);
+     }
+
      free((char*)((registro_t*)elemento)->linea);
      free((registro_t*)elemento);
      free(linea_escribir);
-
      free_strv(campos);
   }
   free(linea);
 
-
+  //Cierro las particiones
   for(size_t i = 0 ;i<K_PARTICIONES;i++){
     fclose(particiones_temporales[i]);
   }
@@ -140,8 +146,8 @@ bool ordenar_archivo(size_t memoria_kb,const char* archivo,const char* output){
   free(linea);
 
   if(memoria <= tam_max_linea) memoria = tam_max_linea * 3;
-  size_t K_PARTICIONES = memoria / tam_max_linea;
-  size_t K_LINEAS = (cantidad_lineas_archivo / K_PARTICIONES ) + 1;
+  size_t K_PARTICIONES = 1;
+  //size_t K_LINEAS = (cantidad_lineas_archivo / K_PARTICIONES ) + 1;
   //Vuelvo al principio del file para no tener que cerrar y volver a abrir. 
   fseek( log_original, 0, SEEK_SET );
 
@@ -154,19 +160,20 @@ bool ordenar_archivo(size_t memoria_kb,const char* archivo,const char* output){
     char filename[50];
     sprintf(filename,"particion%zu.txt",i);
     particiones_temporales[i] = fopen(filename,"w");
-    cargar_particion(log_original,particiones_temporales[i],K_LINEAS,p_cantidad_registros_cargados,cantidad_lineas_archivo);
+    cargar_particion(log_original,particiones_temporales[i],cantidad_lineas_archivo,p_cantidad_registros_cargados,cantidad_lineas_archivo);
     fclose(particiones_temporales[i]);
   }
+
 
   generar_log_ordenado(particiones_temporales,K_PARTICIONES,output);
   fclose(log_original);
 
   //Borro los temporales.
-  for(size_t i = 0; i<K_PARTICIONES;i++){
-    char filename[50];
-    sprintf(filename,"particion%zu.txt",i);
-    remove(filename);
-  }
+  // for(size_t i = 0; i<K_PARTICIONES;i++){
+  //   char filename[50];
+  //   sprintf(filename,"particion%zu.txt",i);
+  //   remove(filename);
+  // }
   return true;
 }
 

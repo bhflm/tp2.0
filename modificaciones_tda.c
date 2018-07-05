@@ -102,8 +102,9 @@ int funcion_cmp_ip(const char* ip1, const char* ip2){
 int funcion_cmp_logs(void* log_a, void* log_b){
 
   char* tiempo_a =  ((linea_registro_t*)log_a)->fecha;
-  char* tiempo_b = ((linea_registro_t*)log_a)->fecha;
+  char* tiempo_b = ((linea_registro_t*)log_b)->fecha;
 
+  
   const char* ip_a = ((linea_registro_t*)log_a)->ip;
   const char* ip_b = ((linea_registro_t*)log_b)->ip;
 
@@ -114,39 +115,36 @@ int funcion_cmp_logs(void* log_a, void* log_b){
   time_t b = iso8601_to_time(tiempo_b);
 
   double diferencia = difftime(a,b);
-  /*
-  Comparacion de diffs de tiempos.
-  Estamos buscando un heap armado de minimos, significa, que vamos a tener algo del
-  estilo (menor horario, mh+1, mh+2, .... mh+n);
-  Si a es mas temprano que b, diff devuelve < 0, entonces tiene q subir en upheap. >
-  > para que suba en upheap, tiene que entrar al swap, esto pasa si en la comparacion
-  de upheap se devuelve > 0.
-  Si a es mas tarde que b, diff devuelve>0.
-  Si a es == b, diff devuelve 0.
-  */
 
-  if(diferencia>0){
-    return 1;
-  }
-  else if(diferencia<0){
+  // printf("TIEMPO_A: %s TIEMPO_B:%s\n",tiempo_a,tiempo_b);
+  // printf("%f\n",diferencia);
+  
+  /*
+  Invertir el heap de maximos: 
+  Para que algo flote en upheap cmp tiene que ser > 0. 
+  Si cmp es > 0, significa q return 1 cuando cmp (a,b) < 0.  2
+  */
+  if(diferencia<0){
     return -1;
   }
-   else{
+  else if(diferencia>0){
+    return 1;
+  }
 
+   else{
        //Tiempos son iguales. Comparo por IPS.
        if ((funcion_cmp_ip(ip_a,ip_b)==-1)){
-         return 1;
-       }
-       else if((funcion_cmp_ip(ip_a,ip_b))==1){
          return -1;
        }
-
+       else if((funcion_cmp_ip(ip_a,ip_b))==1){
+         return 1;
+       }
        else{
          //Tiempos e IPS son iguales. Comparo por recursos.
          if (strcmp(recurso_a,recurso_b)<0){
-          return 1;
+          return -1;
          }
-         return -1;
+         return 1;
        }
   }
 }

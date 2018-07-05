@@ -1,1 +1,1 @@
-ordenar_archivo access010.log access010-ordenado.log
+ordenar_archivo pruebadesordenado.log pruebaordenar.log

@@ -1,1 +1,0 @@
-108.171.116.194	2015-05-17T16:05:17+00:00	GET	/blog/geekery/disabling-battery-in-ubuntu-vms.html
