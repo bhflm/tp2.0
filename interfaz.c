@@ -170,6 +170,9 @@ bool ordenar_archivo(size_t memoria_kb,const char* archivo,const char* output){
     cargar_particion(log_original,particiones_temporales[i],K_LINEAS,p_cantidad_registros_cargados,cantidad_lineas_archivo);
     fclose(particiones_temporales[i]);
   }
+  //ORDENAR LAS PARTICIONES OK
+  //LO UNICO QUE QUEDA ES VER POR QUE FALLA EL RECURSO EN ALGUNOS CASOS
+
 
   //----DEBUG----//
   //generar_log_ordenado(particiones_temporales,K_PARTICIONES,output);
