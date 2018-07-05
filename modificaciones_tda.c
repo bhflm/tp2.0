@@ -111,38 +111,57 @@ int funcion_cmp_logs(void* log_a, void* log_b){
   char* recurso_a = ((linea_registro_t*)log_a)->recurso;
   char* recurso_b = ((linea_registro_t*)log_b)->recurso;
 
+  char* ruta_a = ((linea_registro_t*)log_a)->ruta;
+  char* ruta_b = ((linea_registro_t*)log_b)->ruta;
+
   time_t a = iso8601_to_time(tiempo_a);
   time_t b = iso8601_to_time(tiempo_b);
 
-  double diferencia = difftime(a,b);
+  double diferencia_hora = difftime(a,b);
+  int diferencia_ips = funcion_cmp_ip(ip_a, ip_b);
+  int diferencia_recursos = strcmp(recurso_a, recurso_b);
+  int diferencia_rutas = strcmp(ruta_a, ruta_b);
 
   // printf("TIEMPO_A: %s TIEMPO_B:%s\n",tiempo_a,tiempo_b);
   // printf("%f\n",diferencia);
   
   /*
-  Invertir el heap de maximos: 
+  Invertir el heap de maximos:
   Para que algo flote en upheap cmp tiene que ser > 0. 
   Si cmp es > 0, significa q return 1 cuando cmp (a,b) < 0.  2
   */
-  if(diferencia<0){
-    return -1;
-  }
-  else if(diferencia>0){
+  if(diferencia_hora > 0){
     return 1;
   }
-  else{
-       //Tiempos son iguales. Comparo por IPS.
-       if ((funcion_cmp_ip(ip_a,ip_b)==-1)){
-         return -1;
-       }
-       else if((funcion_cmp_ip(ip_a,ip_b))==1){
-         return 1;
-       }
-       else{
-         //Tiempos e IPS son iguales. Comparo por recursos.
-         return strcmp(recurso_a,recurso_b);
-       }
+  if(diferencia_hora < 0){
+    return -1;
   }
+  
+  //Tiempos son iguales. Comparo por IPS.
+  if (diferencia_ips > 0){
+         return 1;
+  }
+  if (diferencia_ips < 0){
+         return -1;
+  }
+      
+  //Tiempos e IPS son iguales. Comparo por recursos.
+  if (diferencia_recursos > 0){
+    return 1;
+  }
+  if (diferencia_recursos < 0){
+    return -1;
+  }
+  
+  //Tiempos, IPS y registros son iguales. Comparo por rutas.
+  if (diferencia_rutas > 0){
+    return 1;
+  }
+  if (diferencia_rutas < 0){
+    return -1;
+  }
+
+  return 0;
 }
 
 int funcion_cmp_registros(void* a,void* b){

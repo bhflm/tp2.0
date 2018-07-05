@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "pila.h"
+#include "strutil.h"
 
 
 typedef struct nodo{
