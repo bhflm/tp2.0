@@ -130,8 +130,7 @@ int funcion_cmp_logs(void* log_a, void* log_b){
   else if(diferencia>0){
     return 1;
   }
-
-   else{
+  else{
        //Tiempos son iguales. Comparo por IPS.
        if ((funcion_cmp_ip(ip_a,ip_b)==-1)){
          return -1;
@@ -141,10 +140,7 @@ int funcion_cmp_logs(void* log_a, void* log_b){
        }
        else{
          //Tiempos e IPS son iguales. Comparo por recursos.
-         if (strcmp(recurso_a,recurso_b)<0){
-          return -1;
-         }
-         return 1;
+         return strcmp(recurso_a,recurso_b);
        }
   }
 }
