@@ -33,13 +33,13 @@ void swap(void* arreglo[],size_t pos1,size_t pos2){
 
 void upheap(heap_t* heap,size_t pos){
   if(pos==0) return;
+
   size_t padre = (pos-1)/2;
-  if(heap->cmp(heap->arreglo[pos],heap->arreglo[padre])<0){
-    
-    return;
-  }
+
+  if(heap->cmp(heap->arreglo[pos],heap->arreglo[padre])<0) return;
   swap(heap->arreglo,pos,padre);
   upheap(heap,padre);
+
 }
 
 void downheap(void* arr[],size_t pos,size_t cantidad,cmp_func_t cmp){
@@ -49,11 +49,9 @@ void downheap(void* arr[],size_t pos,size_t cantidad,cmp_func_t cmp){
   size_t der = izq+1;
   size_t mayor = pos;
 
+  if((izq<cantidad) && cmp(arr[izq],arr[pos])>0) mayor = izq;
 
-  if((izq<cantidad-1) && cmp(arr[izq],arr[pos])>0) mayor = izq;
-
-  if((der<cantidad-1) && cmp(arr[der],arr[mayor])>0) mayor = der;
-
+  if((der<cantidad) && cmp(arr[der],arr[mayor])>0) mayor = der;
 
   if(mayor!=pos){
     swap(arr,pos,mayor);
@@ -62,8 +60,8 @@ void downheap(void* arr[],size_t pos,size_t cantidad,cmp_func_t cmp){
 }
 
 void heapify(void* arr[],size_t cantidad,cmp_func_t cmp){
-    for(size_t i=cantidad-1;i>0;i--){
-      downheap(arr,i,cantidad,cmp);
+    for(size_t i = cantidad; i>0; i--){
+      downheap(arr,i-1,cantidad,cmp);
     }
 }
 
@@ -132,12 +130,10 @@ bool heap_encolar(heap_t* heap,void* elem){
   }
 
   if(heap_esta_vacio(heap)) heap->arreglo[0]=elem;
-
   else{
     heap->arreglo[heap->cantidad]=elem;
     upheap(heap,heap->cantidad);
   }
-
 
   heap->cantidad++;
   return true;
@@ -146,18 +142,10 @@ bool heap_encolar(heap_t* heap,void* elem){
 void* heap_desencolar(heap_t* heap){
   if(heap_esta_vacio(heap)) return NULL;
 
-  void* dato;
-
-  if(heap->cantidad==1){
-    dato = heap->arreglo[0];
-  }
-  else{
-    swap(heap->arreglo,0,heap->cantidad-1);
-    downheap(heap->arreglo,0,heap->cantidad,heap->cmp);
-  }
-
-  dato = heap->arreglo[heap->cantidad-1];
+  void* dato = heap->arreglo[0];
+  swap(heap->arreglo,0,heap->cantidad-1); 
   heap->cantidad --;
+  downheap(heap->arreglo,0,heap->cantidad,heap->cmp);
 
   if(heap->cantidad < heap->capacidad/COEF_CANT_MINIMA){
     heap_redimensionar(heap,heap->capacidad/COEF_REDIM);
@@ -173,9 +161,9 @@ bool heap_esta_vacio(const heap_t *heap){
   return (heap_cantidad(heap)==0);
 }
 
-void heap_destruir(heap_t* heap,void destruir_elemento(void *e)){
-  for(size_t i=0;i<heap->capacidad;i++){
-    if(heap->arreglo[i] && destruir_elemento) destruir_elemento(heap->arreglo[i]);
+void heap_destruir(heap_t* heap,void destruir_elemento(void *)){
+  for(size_t i=0;i<heap->cantidad;i++){
+    if(destruir_elemento) destruir_elemento(heap->arreglo[i]);
   }
   free(heap->arreglo);
   free(heap);

@@ -141,10 +141,10 @@ int funcion_cmp_logs(void* log_a, void* log_b){
        }
        else{
          //Tiempos e IPS son iguales. Comparo por recursos.
-         if (strcmp(recurso_a,recurso_b)<0){
-          return -1;
+         if (strcmp(recurso_a,recurso_b)>0){
+          return 1;
          }
-         return 1;
+         return -1;
        }
   }
 }

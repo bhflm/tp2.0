@@ -26,7 +26,6 @@ const char* VER_VISITANTES = "ver_visitantes";
 /*Esta funcion se encarga de cargar una particion con sus K lineas correspondientes.*/
 void cargar_particion(FILE* log_original,FILE* particion,size_t K_LINEAS, size_t* cantidad_registros_cargados,size_t cantidad_lineas_archivo){
   linea_registro_t** lineas_particion;
-
   lineas_particion = malloc(sizeof(linea_registro_t*)*K_LINEAS);
   char* linea=NULL;
   size_t tam_linea = 0;
@@ -44,16 +43,15 @@ void cargar_particion(FILE* log_original,FILE* particion,size_t K_LINEAS, size_t
     }
   }
   free(linea);
-  printf("LINEAS: %zu\n",K_LINEAS);
+
   //ORDENO LAS LINEAS. 
   heap_sort((void**)lineas_particion,particiones_cargadas,(cmp_func_t)funcion_cmp_logs);
 
 
   //ESCRIBO LAS LINEAS
   for(size_t i = 0 ; i < particiones_cargadas; i++){
-    
-    printf("%s | %s\n",lineas_particion[i]->ip,lineas_particion[i]->fecha);
-    
+
+
     fprintf(particion,"%s	%s	%s	%s",lineas_particion[i]->ip,lineas_particion[i]->fecha,lineas_particion[i]->recurso,lineas_particion[i]->ruta);
   }
   linea_registro_destruir(lineas_particion,particiones_cargadas);
@@ -146,12 +144,20 @@ bool ordenar_archivo(size_t memoria_kb,const char* archivo,const char* output){
   free(linea);
 
   if(memoria <= tam_max_linea) memoria = tam_max_linea * 3;
-  size_t K_PARTICIONES = 1;
+  //size_t K_PARTICIONES = memoria / tam_max_linea;
   //size_t K_LINEAS = (cantidad_lineas_archivo / K_PARTICIONES ) + 1;
+  
+
+  //----DEBUG----//
+  size_t K_PARTICIONES = 1;
+  size_t K_LINEAS = cantidad_lineas_archivo;
+  //----DEBUG----//
+  
   //Vuelvo al principio del file para no tener que cerrar y volver a abrir. 
   fseek( log_original, 0, SEEK_SET );
 
   //Hago un vector de particiones  y  c/u lo cargo con K lineas.
+  //VA A CARGAR UNA PARTICION (DEBUG)
   FILE* particiones_temporales[K_PARTICIONES];
   size_t cantidad_registros_cargados = 0;
   size_t* p_cantidad_registros_cargados = &cantidad_registros_cargados;
@@ -160,12 +166,13 @@ bool ordenar_archivo(size_t memoria_kb,const char* archivo,const char* output){
     char filename[50];
     sprintf(filename,"particion%zu.txt",i);
     particiones_temporales[i] = fopen(filename,"w");
-    cargar_particion(log_original,particiones_temporales[i],cantidad_lineas_archivo,p_cantidad_registros_cargados,cantidad_lineas_archivo);
+    //CARGAR PARTICION ENTRA CON UNA PARTICION SOLA Y LA CANTIDAD DE LINEAS DEL ARCHIVO DE PRUEBA.
+    cargar_particion(log_original,particiones_temporales[i],K_LINEAS,p_cantidad_registros_cargados,cantidad_lineas_archivo);
     fclose(particiones_temporales[i]);
   }
 
-
-  generar_log_ordenado(particiones_temporales,K_PARTICIONES,output);
+  //----DEBUG----//
+  //generar_log_ordenado(particiones_temporales,K_PARTICIONES,output);
   fclose(log_original);
 
   //Borro los temporales.
@@ -294,7 +301,6 @@ char* parsear_linea(char* linea,size_t numero_campo){
   free_strv(campos);
   return campo;
 }
-
 
 size_t llamar_funcion(char* comando){
   char** campos = split(comando,' ');
